@@ -164,11 +164,9 @@ defmodule PasswordGenerator do
   end
 
   defp get(:symbols) do
-    symbols =
-      @symbols
-      |> String.split("", trim: true)
-
-    Enum.random(symbols)
+    @symbols
+    |> String.split("", trim: true)
+    |> Enum.random()
   end
 
   defp get(_option), do: false
