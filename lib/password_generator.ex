@@ -2,7 +2,6 @@ defmodule PasswordGenerator do
   @moduledoc """
   Generates random password depending on paramaters. Module main function is `generate(options)`.
   That functon takes the options map.
-
   Options example:
       options = %{
         "length" => "5",
@@ -10,7 +9,6 @@ defmodule PasswordGenerator do
         "uppercase" => "false",
         "symbols" => "false"
       }
-
   The options are only 4, `length`, `numbers`, `uppercase`, `symbols`.
   When the function is invoked the first thing is:
   Defines a length variable that checks the map passed keys for the length.
@@ -54,7 +52,6 @@ defmodule PasswordGenerator do
 
   @doc """
   Generates password for given options.
-
   ## Examples
       options = %{
         "length" => "5",
@@ -62,10 +59,8 @@ defmodule PasswordGenerator do
         "uppercase" => "false",
         "symbols" => "false"
       }
-
       iex> PasswordGenerator.generate(options)
-      "abcdf"
-
+      {:ok, "abcdf"}
       options = %{
         "length" => "5",
         "numbers" => "true",
@@ -73,30 +68,40 @@ defmodule PasswordGenerator do
         "symbols" => "false"
       }
       iex> PasswordGenerator.generate(options)
-      "ab1d3"
-
+      {:ok, "ab1d3"}
   """
-  @spec generate(options :: map()) :: {:ok, bitstring()} | {:error, bitstring()}
+  @spec generate(options :: map()) :: {:ok, binary()} | {:error, binary()}
   def generate(options) do
-    length = Map.has_key?(options, "length")
-    validate_length(length, options)
+    validate_length(options)
+    |> validate_length_is_integer()
+    |> validate_options_values_are_boolean()
+    |> validate_options()
   end
 
-  defp validate_length(false, _options), do: {:error, "Please provide a length"}
-
-  defp validate_length(true, options) do
-    numbers = Enum.map(Enum.to_list(0..9), fn n -> Integer.to_string(n) end)
-    length = options["length"]
-    length = String.contains?(length, numbers)
-    validate_length_is_integer(length, options)
+  # Checks if the length options is included, returns the options or {:error, error}
+  @spec validate_length(options :: map()) :: map() | {:error, binary()}
+  defp validate_length(options) do
+    get_error(Map.has_key?(options, "length"), options, "Please provide a length")
   end
 
-  defp validate_length_is_integer(false, _options) do
-    {:error, "Only integers allowed for length."}
+  # Validates that the lenght value is a number, returns the options or {:error, error}
+  @spec validate_length_is_integer(options :: map() | {:error, binary()}) ::
+          {:error, binary()} | map()
+  defp validate_length_is_integer({:error, error}), do: {:error, error}
+
+  defp validate_length_is_integer(options) do
+    numbers = Enum.map(0..9, &Integer.to_string(&1))
+
+    get_error(String.contains?(options["length"], numbers), options, "Please provide a length")
   end
 
-  defp validate_length_is_integer(true, options) do
-    length = options["length"] |> String.trim() |> String.to_integer()
+  # Validates that the values of the options without the length
+  # are booleans, returns the options or {:error, error}
+  @spec validate_options_values_are_boolean(options :: map() | {:error, binary()}) ::
+          map() | {:error, binary()}
+  def validate_options_values_are_boolean({:error, error}), do: {:error, error}
+
+  def validate_options_values_are_boolean(options) do
     options_without_length = Map.delete(options, "length")
     options_values = Map.values(options_without_length)
     # Iterate over the values and converts them to atoms and check if boolean
@@ -105,42 +110,48 @@ defmodule PasswordGenerator do
       options_values
       |> Enum.all?(fn x -> String.to_atom(x) |> is_boolean() end)
 
-    validate_options_values_are_boolean(value, length, options_without_length)
+    get_error(value, options, "Only booleans allowed for options values")
   end
 
-  defp validate_options_values_are_boolean(false, _length, _options) do
-    {:error, "Only booleans allowed for options values"}
-  end
+  def get_error(true, options, _error), do: options
 
-  defp validate_options_values_are_boolean(true, length, options) do
-    options = [:lowercase_letter | included_options(options)]
+  def get_error(false, _options, error), do: {:error, error}
+
+  # Validates that all options are valid, returns error when an invalid option is found.
+  defp validate_options({:error, error}), do: {:error, error}
+
+  defp validate_options(options) do
+    length_to_integer = options["length"] |> String.trim() |> String.to_integer()
+    options_without_length = Map.delete(options, "length")
+    options = ["lowercase_letter" | included_options(options_without_length)]
     included = include(options)
-    length = length - length(included)
+    length = length_to_integer - length(included)
     random_strings = generate_strings(length, options)
     strings = included ++ random_strings
-    invalid_option? = strings |> Enum.any?(&(&1 == false))
-    validate_options(invalid_option?, strings)
+    invalid_option? = false in strings
+
+    case invalid_option? do
+      true ->
+        {:error, "Only options allowed numbers, uppercase, symbols."}
+
+      false ->
+        string =
+          strings
+          |> Enum.shuffle()
+          |> to_string()
+
+        {:ok, string}
+    end
   end
 
-  defp validate_options(true, _strings) do
-    {:error, "Only options allowed numbers, uppercase, symbols."}
-  end
-
-  defp validate_options(false, strings) do
-    string =
-      strings
-      |> Enum.shuffle()
-      |> to_string()
-
-    {:ok, string}
-  end
-
+  @spec generate_strings(length :: integer(), options :: list()) :: list()
   defp generate_strings(length, options) do
     Enum.map(1..length, fn _ ->
       Enum.random(options) |> get()
     end)
   end
 
+  @spec include(options :: list()) :: list()
   defp include(options) do
     options
     |> Enum.map(&get(&1))
@@ -150,20 +161,22 @@ defmodule PasswordGenerator do
   # example ?a = 97 and <<?a>> = "a"
   # Enum.random takes a range of integers
   # passing binary values you get all the letters of the alphabet
-  defp get(:lowercase_letter) do
+  # Returns a letter string for the given option, false when not a valid option
+  @spec get(binary()) :: binary() | false
+  defp get("lowercase_letter") do
     <<Enum.random(?a..?z)>>
   end
 
-  defp get(:numbers) do
+  defp get("numbers") do
     Enum.random(0..9)
     |> Integer.to_string()
   end
 
-  defp get(:uppercase) do
+  defp get("uppercase") do
     <<Enum.random(?A..?Z)>>
   end
 
-  defp get(:symbols) do
+  defp get("symbols") do
     @symbols
     |> String.split("", trim: true)
     |> Enum.random()
@@ -171,15 +184,17 @@ defmodule PasswordGenerator do
 
   defp get(_option), do: false
 
-  # Returns a list of atoms of included options
+  # Returns a list of strings of included options
+  @spec included_options(options :: map()) :: list()
   defp included_options(options) do
     # Returns a list of key value pairs when value is true
     # example [{"numbers", true}, {"uppercase", true}]
     # then keys get mapped and converted to atoms
     # example [:numbers, :uppercase]
-    Enum.filter(options, fn {_key, value} ->
+    options
+    |> Enum.filter(fn {_key, value} ->
       value |> String.trim() |> String.to_existing_atom()
     end)
-    |> Enum.map(fn {key, _value} -> String.to_atom(key) end)
+    |> Enum.map(fn {key, _value} -> key end)
   end
 end
