@@ -114,6 +114,7 @@ defmodule PasswordGenerator do
     value =
       options_values
       |> Enum.all?(fn x -> String.to_atom(x) |> is_boolean() end)
+
     error = "Only booleans allowed for options values"
 
     get_error(value, options, error)

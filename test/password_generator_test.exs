@@ -14,9 +14,9 @@ defmodule PasswordGeneratorTest do
       {:ok, result} = PasswordGenerator.generate(options)
 
       options_type = %{
-        lowercase: Enum.map(?a..?z, & <<&1>>),
-        numbers: Enum.map(0..9, & Integer.to_string(&1)),
-        uppercase: Enum.map(?A..?Z, & <<&1>>),
+        lowercase: Enum.map(?a..?z, &<<&1>>),
+        numbers: Enum.map(0..9, &Integer.to_string(&1)),
+        uppercase: Enum.map(?A..?Z, &<<&1>>),
         symbols: String.split("!#$%&()*+,-./:;<=>?@[]^_{|}~", "", trim: true)
       }
 
@@ -50,7 +50,7 @@ defmodule PasswordGeneratorTest do
       assert {:error, _error} = PasswordGenerator.generate(options)
     end
 
-    test "returns a lowercase string just with the length", %{options_type: options}  do
+    test "returns a lowercase string just with the length", %{options_type: options} do
       length_option = %{"length" => "5"}
       {:ok, result} = PasswordGenerator.generate(length_option)
 
@@ -77,7 +77,7 @@ defmodule PasswordGeneratorTest do
     end
 
     test "returns a string with only lowercase", %{options_type: options, result: result} do
-      assert  10 = String.length(result)
+      assert 10 = String.length(result)
       assert String.contains?(result, options.lowercase)
 
       refute String.contains?(result, options.numbers)
@@ -95,7 +95,7 @@ defmodule PasswordGeneratorTest do
 
       {:ok, result} = PasswordGenerator.generate(options_with_numbers)
 
-      assert  10 = String.length(result)
+      assert 10 = String.length(result)
       assert String.contains?(result, options.numbers)
 
       refute String.contains?(result, options.uppercase)
@@ -112,7 +112,7 @@ defmodule PasswordGeneratorTest do
 
       {:ok, result} = PasswordGenerator.generate(options_with_uppercase)
 
-      assert  10 = String.length(result)
+      assert 10 = String.length(result)
       assert String.contains?(result, options.uppercase)
 
       refute String.contains?(result, options.numbers)
@@ -129,7 +129,7 @@ defmodule PasswordGeneratorTest do
 
       {:ok, result} = PasswordGenerator.generate(included_options)
 
-      assert  10 = String.length(result)
+      assert 10 = String.length(result)
       assert String.contains?(result, options.uppercase)
       assert String.contains?(result, options.numbers)
 
@@ -146,7 +146,7 @@ defmodule PasswordGeneratorTest do
 
       {:ok, result} = PasswordGenerator.generate(included_options)
 
-      assert  10 = String.length(result)
+      assert 10 = String.length(result)
       assert String.contains?(result, options.symbols)
 
       refute String.contains?(result, options.numbers)
@@ -163,7 +163,7 @@ defmodule PasswordGeneratorTest do
 
       {:ok, result} = PasswordGenerator.generate(included_options)
 
-      assert  10 = String.length(result)
+      assert 10 = String.length(result)
       assert String.contains?(result, options.symbols)
       assert String.contains?(result, options.uppercase)
       assert String.contains?(result, options.numbers)
@@ -179,7 +179,7 @@ defmodule PasswordGeneratorTest do
 
       {:ok, result} = PasswordGenerator.generate(included_options)
 
-      assert  10 = String.length(result)
+      assert 10 = String.length(result)
       assert String.contains?(result, options.symbols)
       assert String.contains?(result, options.uppercase)
 
@@ -196,7 +196,7 @@ defmodule PasswordGeneratorTest do
 
       {:ok, result} = PasswordGenerator.generate(included_options)
 
-      assert  10 = String.length(result)
+      assert 10 = String.length(result)
       assert String.contains?(result, options.symbols)
       assert String.contains?(result, options.numbers)
 
@@ -206,15 +206,16 @@ defmodule PasswordGeneratorTest do
 
   describe "Property based" do
     property "invalid options" do
-      options_data = StreamData.fixed_map(%{
-        "length" => StreamData.integer(1..100),
-        "invalid" => StreamData.boolean
-      })
+      options_data =
+        StreamData.fixed_map(%{
+          "length" => StreamData.integer(1..100),
+          "invalid" => StreamData.boolean()
+        })
 
-      check all options <- options_data, max_runs: 5 do
-        options = Map.update!(options, "length", &("#{&1}")) |> IO.inspect
-        options = Map.replace!(options, "invalid", "true") |> IO.inspect
-        assert {:error, _error} = PasswordGenerator.generate(options) |> IO.inspect
+      check all(options <- options_data, max_runs: 5) do
+        options = Map.update!(options, "length", &"#{&1}") |> IO.inspect()
+        options = Map.replace!(options, "invalid", "true") |> IO.inspect()
+        assert {:error, _error} = PasswordGenerator.generate(options) |> IO.inspect()
       end
     end
   end
