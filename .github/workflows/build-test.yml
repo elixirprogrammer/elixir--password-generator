@@ -1,0 +1,33 @@
+name: Build and Test
+
+on: [push]
+
+env:
+  ELIXIR_VERSION: 1.14.1
+  MIX_ENV: test
+  OTP_VERSION: 25
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Elixir v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}
+        uses: erlef/setup-elixir@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Install → Compile dependencies
+        run: |
+          epmd -daemon
+          mix do deps.get --only test
+          mix compile
+      - name: Check Source Code Formatting
+        run: mix format --check-formatted
+      - name: Run tests
+        run: |
+          mix test
