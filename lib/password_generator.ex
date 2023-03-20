@@ -81,13 +81,7 @@ defmodule PasswordGenerator do
   # Checks if the length options is included, returns the options or {:error, error}
   @spec validate_length(options :: map()) :: map() | {:error, binary()}
   defp validate_length(options) do
-    case Map.has_key?(options, "length") do
-      true ->
-        options
-
-      false ->
-        {:error, "Please provide a length"}
-    end
+    get_error(Map.has_key?(options, "length"), options, "Please provide a length")
   end
 
   # Validates that the lenght value is a number, returns the options or {:error, error}
@@ -97,15 +91,8 @@ defmodule PasswordGenerator do
 
   defp validate_length_is_integer(options) do
     numbers = Enum.map(0..9, &Integer.to_string(&1))
-    length = options["length"]
 
-    case String.contains?(length, numbers) do
-      true ->
-        options
-
-      false ->
-        {:error, "Please provide a length"}
-    end
+    get_error(String.contains?(options["length"], numbers), options, "Please provide a length")
   end
 
   # Validates that the values of the options without the length
@@ -123,14 +110,12 @@ defmodule PasswordGenerator do
       options_values
       |> Enum.all?(fn x -> String.to_atom(x) |> is_boolean() end)
 
-    case value do
-      true ->
-        options
-
-      false ->
-        {:error, "Only booleans allowed for options values"}
-    end
+    get_error(value, options, "Only booleans allowed for options values")
   end
+
+  def get_error(true, options, _error), do: options
+
+  def get_error(false, _options, error), do: {:error, error}
 
   # Validates that all options are valid, returns error when an invalid option is found.
   defp validate_options({:error, error}), do: {:error, error}
@@ -192,11 +177,9 @@ defmodule PasswordGenerator do
   end
 
   defp get("symbols") do
-    symbols =
-      @symbols
-      |> String.split("", trim: true)
-
-    Enum.random(symbols)
+    @symbols
+    |> String.split("", trim: true)
+    |> Enum.random()
   end
 
   defp get(_option), do: false
