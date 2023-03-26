@@ -111,20 +111,21 @@ defmodule PasswordGenerator do
     options_values = Map.values(options_without_length)
     # Iterate over the values and converts them to atoms and check if boolean
     # If not all the values are booleans false is returned, true otherwise.
-    value =
-      options_values
-      |> Enum.all?(fn x -> String.to_atom(x) |> is_boolean() end)
+    value = Enum.all?(options_values, &(&1 |> String.to_atom() |> is_boolean()))
 
     error = "Only booleans allowed for options values"
 
     get_error(value, options, error)
   end
 
+  # Returns error when false
+  @spec get_error(boolean(), map(), binary()) :: map() | {:error, binary()}
   def get_error(true, options, _error), do: options
 
   def get_error(false, _options, error), do: {:error, error}
 
   # Validates that all options are valid, returns error when an invalid option is found.
+  @spec validate_options({:error, binary()} | map()) :: {:ok, binary()} | {:error, binary()}
   defp validate_options({:error, error}), do: {:error, error}
 
   defp validate_options(options) do
@@ -153,16 +154,11 @@ defmodule PasswordGenerator do
 
   @spec generate_strings(length :: integer(), options :: list()) :: list()
   defp generate_strings(length, options) do
-    Enum.map(1..length, fn _ ->
-      Enum.random(options) |> get()
-    end)
+    Enum.map(1..length, fn _ -> Enum.random(options) |> get() end)
   end
 
   @spec include(options :: list()) :: list()
-  defp include(options) do
-    options
-    |> Enum.map(&get(&1))
-  end
+  defp include(options), do: Enum.map(options, &get/1)
 
   # Letters can be represented by the binary value
   # example ?a = 97 and <<?a>> = "a"
@@ -170,24 +166,13 @@ defmodule PasswordGenerator do
   # passing binary values you get all the letters of the alphabet
   # Returns a letter string for the given option, false when not a valid option
   @spec get(binary()) :: binary() | false
-  defp get("lowercase_letter") do
-    <<Enum.random(?a..?z)>>
-  end
+  defp get("lowercase_letter"), do: <<Enum.random(?a..?z)>>
 
-  defp get("numbers") do
-    Enum.random(0..9)
-    |> Integer.to_string()
-  end
+  defp get("numbers"), do: Integer.to_string(Enum.random(0..9))
 
-  defp get("uppercase") do
-    <<Enum.random(?A..?Z)>>
-  end
+  defp get("uppercase"), do: <<Enum.random(?A..?Z)>>
 
-  defp get("symbols") do
-    @symbols
-    |> String.split("", trim: true)
-    |> Enum.random()
-  end
+  defp get("symbols"), do: @symbols |> String.split("", trim: true) |> Enum.random()
 
   defp get(_option), do: false
 
@@ -198,10 +183,8 @@ defmodule PasswordGenerator do
     # example [{"numbers", true}, {"uppercase", true}]
     # then keys get mapped and converted to atoms
     # example [:numbers, :uppercase]
-    options
-    |> Enum.filter(fn {_key, value} ->
-      value |> String.trim() |> String.to_existing_atom()
+    Enum.reduce(options, [], fn {k, v}, acc ->
+      if v |> String.trim() |> String.to_existing_atom(), do: [k | acc], else: acc
     end)
-    |> Enum.map(fn {key, _value} -> key end)
   end
 end
